@@ -6,7 +6,7 @@ A local-first desktop application for reading folders of images as manga / comic
 
 - **Recursive library scan.** Pick any root folder; every subdirectory containing images becomes a browsable chapter. Folder hierarchies of arbitrary depth are supported, with breadcrumb navigation.
 - **Cover bubble-up.** Each folder shows the first naturally-sorted image as its cover. Parent folders that contain no direct images inherit the cover of their first child, recursively.
-- **XMP tag integration.** Reads the Windows "Tags" field (XMP `dc:subject`) embedded in JPEG covers, exposes those tags as filter chips, and writes back to the same field on save. Non-JPEG covers (PNG, WebP, GIF, BMP, AVIF) are automatically re-encoded to JPEG before the first tag write.
+- **XMP tag integration.** Reads the Windows "Tags" field (XMP `dc:subject`) embedded in JPEG covers, exposes those tags as filter chips, and writes back to the same field on save. Tag editing lives in the folder view — type freely, or pick from a searchable dropdown of existing tags. Non-JPEG covers (PNG, WebP, GIF, BMP, AVIF) are automatically re-encoded to JPEG before the first tag write.
 - **Search and filter.** Full-text search on folder names, multi-tag include filter with searchable dropdown, minimum-pages filter (counts direct images only, ignoring subfolder contents), and a random-folder picker that respects the active filters.
 - **Sortable.** Sort by name, last-modified date, or page count, ascending or descending. Preference persists across launches.
 - **Reader.** Three modes — single page, two-page spread (flush, no gutter), and vertical scroll. Keyboard shortcuts (`A`/`D` or `←`/`→` to flip, `V` to cycle modes, `F11` to toggle fullscreen, `Esc` to exit). Jump-to-page dropdown. In fullscreen, the chrome auto-hides and reappears when the mouse approaches the top of the window.
@@ -23,13 +23,13 @@ A local-first desktop application for reading folders of images as manga / comic
 | Local cache | SQLite via `better-sqlite3` (WAL mode) |
 | Image serving | Custom privileged `local://` protocol; no HTTP server, no relaxed CSP |
 | Metadata I/O | Hand-rolled JPEG APP1 / XMP packet parser and writer (no native dependencies) |
-| Format conversion | Electron `nativeImage` (PNG) and Chromium-based `<canvas>` re-encode (WebP / GIF / BMP / AVIF → JPEG) |
-| Packaging | `vite-plugin-electron` for dev/HMR; `electron-builder` (NSIS) for the Windows installer |
+| Format conversion | Chromium decoder + `<canvas>` re-encode (PNG / WebP / GIF / BMP / AVIF → JPEG) |
+| Packaging | `vite-plugin-electron` for dev / HMR; `electron-builder` (NSIS) available via `npm run build` |
 
 ## Requirements
 
 - Node.js 20+
-- Windows 10 / 11 for the packaged installer. The dev build also runs on macOS / Linux but is not configured for distribution there.
+- Windows 10 / 11 has been the primary target. The dev build also runs on macOS and Linux.
 
 ## Quick start
 
@@ -50,6 +50,8 @@ src/
 
 ## Data locations
 
-- Library cache: `cache.db` lives in the app folder itself — next to `package.json` in development, next to the `.exe` in an installed build.
-- Per-route scroll positions and reader preferences: `localStorage` / `sessionStorage` in the webview.
-- Tags are stored both in the cache database and embedded in the cover JPEG's XMP packet, so the source of truth lives with your files.
+Everything lives next to the app — nothing is written to `%APPDATA%`.
+
+- `cache.db` — library cache (folders, covers, tags, mtimes). Next to `package.json` in development, next to the `.exe` in an installed build.
+- `userdata/` — Electron's own runtime data (Chromium HTTP cache, cookies, localStorage / sessionStorage, IndexedDB, GPU cache, logs). Same folder.
+- Tags are also embedded in the cover JPEG's XMP packet, so the source of truth lives with your files. If you delete `cache.db`, your tags survive in the JPEGs.
