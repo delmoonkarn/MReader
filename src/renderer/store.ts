@@ -1,0 +1,53 @@
+import { create } from "zustand";
+
+export type ReaderMode = "single" | "double" | "scroll";
+export type SortBy = "name" | "mtime" | "image_count";
+export type SortDir = "asc" | "desc";
+
+type State = {
+  root: string | null;
+  activeTags: string[];
+  query: string;
+  minPages: number;
+  readerMode: ReaderMode;
+  sortBy: SortBy;
+  sortDir: SortDir;
+  setRoot: (p: string | null) => void;
+  toggleTag: (t: string) => void;
+  clearTags: () => void;
+  setQuery: (q: string) => void;
+  setMinPages: (n: number) => void;
+  setReaderMode: (m: ReaderMode) => void;
+  setSort: (by: SortBy, dir: SortDir) => void;
+};
+
+export const useStore = create<State>((set) => ({
+  root: null,
+  activeTags: [],
+  query: "",
+  minPages: parseInt(localStorage.getItem("minPages") ?? "0", 10) || 0,
+  readerMode: (localStorage.getItem("readerMode") as ReaderMode | null) ?? "single",
+  sortBy: (localStorage.getItem("sortBy") as SortBy | null) ?? "mtime",
+  sortDir: (localStorage.getItem("sortDir") as SortDir | null) ?? "desc",
+  setRoot: (p) => set({ root: p }),
+  toggleTag: (t) =>
+    set((s) => ({
+      activeTags: s.activeTags.includes(t) ? s.activeTags.filter((x) => x !== t) : [...s.activeTags, t],
+    })),
+  clearTags: () => set({ activeTags: [] }),
+  setQuery: (q) => set({ query: q }),
+  setMinPages: (n) => {
+    const v = Math.max(0, Math.floor(n) || 0);
+    localStorage.setItem("minPages", String(v));
+    set({ minPages: v });
+  },
+  setReaderMode: (m) => {
+    localStorage.setItem("readerMode", m);
+    set({ readerMode: m });
+  },
+  setSort: (by, dir) => {
+    localStorage.setItem("sortBy", by);
+    localStorage.setItem("sortDir", dir);
+    set({ sortBy: by, sortDir: dir });
+  },
+}));
