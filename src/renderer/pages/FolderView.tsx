@@ -6,6 +6,7 @@ import SortPicker from "../components/SortPicker";
 import Breadcrumb, { Crumb } from "../components/Breadcrumb";
 import TagEditor from "../components/TagEditor";
 import { useScrollRestore } from "../lib/useScrollRestore";
+import { getLastVisited, focusFolderCard, clearLastVisited } from "../lib/lastVisited";
 import { useStore } from "../store";
 
 export default function FolderView() {
@@ -39,7 +40,19 @@ export default function FolderView() {
     api.ancestors(folderId).then(setTrail);
   }, [folderId, sortBy, sortDir]);
 
-  useScrollRestore(`/folder/${folderId}`, rows.length > 0 || pages.length > 0 || self !== null);
+  const routeKey = `/folder/${folderId}`;
+  const lastChild = getLastVisited(routeKey);
+  useScrollRestore(
+    routeKey,
+    (rows.length > 0 || pages.length > 0 || self !== null) && lastChild === undefined
+  );
+  useEffect(() => {
+    if (rows.length === 0) return;
+    const target = getLastVisited(routeKey);
+    if (target === undefined) return;
+    focusFolderCard(target);
+    clearLastVisited(routeKey);
+  }, [rows, routeKey]);
 
   const hasImages = (self?.image_count ?? 0) > 0;
   const hasChildren = rows.length > 0;

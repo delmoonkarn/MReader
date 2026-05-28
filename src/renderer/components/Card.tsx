@@ -1,14 +1,23 @@
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { FolderRow, toLocalUrl } from "../api";
+import { setLastVisited } from "../lib/lastVisited";
 
 export default function Card({ row }: { row: FolderRow }) {
   const nav = useNavigate();
+  const location = useLocation();
   // Always show the overview/gallery first; the Reader is opened from there.
-  const goto = () => nav(`/folder/${row.id}`);
+  const goto = () => {
+    setLastVisited(location.pathname, row.id);
+    nav(`/folder/${row.id}`);
+  };
   const mixed = row.image_count > 0 && row.child_count > 0;
 
   return (
-    <button onClick={goto} className="group text-left w-full block">
+    <button
+      onClick={goto}
+      data-folder-id={row.id}
+      className="group text-left w-full block"
+    >
       <div className="aspect-[2/3] bg-neutral-800 overflow-hidden rounded-md ring-1 ring-neutral-800 group-hover:ring-indigo-500 transition">
         {row.cover_path ? (
           <img

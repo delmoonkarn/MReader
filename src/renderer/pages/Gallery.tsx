@@ -6,6 +6,7 @@ import Card from "../components/Card";
 import TagFilter from "../components/TagFilter";
 import SortPicker from "../components/SortPicker";
 import { useScrollRestore } from "../lib/useScrollRestore";
+import { getLastVisited, focusFolderCard, clearLastVisited } from "../lib/lastVisited";
 
 export default function Gallery() {
   const {
@@ -27,7 +28,17 @@ export default function Gallery() {
   const [tagsVersion, setTagsVersion] = useState(0);
 
   // Restore scroll once rows are in the DOM so the page has its real height.
-  useScrollRestore("/", rows.length > 0);
+  // If the user came back from a folder they opened from here, prefer scrolling
+  // *that card* into view (and highlighting it) over restoring a raw scroll Y.
+  const lastChild = getLastVisited("/");
+  useScrollRestore("/", rows.length > 0 && lastChild === undefined);
+  useEffect(() => {
+    if (rows.length === 0) return;
+    const target = getLastVisited("/");
+    if (target === undefined) return;
+    focusFolderCard(target);
+    clearLastVisited("/");
+  }, [rows]);
 
   const refresh = useCallback(async () => {
     const sort = { by: sortBy, dir: sortDir };
