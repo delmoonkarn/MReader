@@ -4,3 +4,11 @@ dist-electron
 release
 *.log
 .DS_Store
+
+# Local SQLite library cache (sits next to package.json in dev now)
+cache.db
+cache.db-shm
+cache.db-wal
+
+# Electron-managed runtime data (Chromium cache, cookies, localStorage, etc.)
+userdata/

@@ -8,6 +8,17 @@ import { getDb } from "./db";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const isDev = !!process.env.VITE_DEV_SERVER_URL;
 
+// Keep ALL Electron-managed data (Chromium cache, cookies, localStorage,
+// IndexedDB, GPUCache, logs, etc.) inside the app folder instead of %APPDATA%.
+// Must be set before app.whenReady().
+{
+  const appRoot = app.isPackaged ? path.dirname(app.getPath("exe")) : app.getAppPath();
+  app.setPath("userData", path.join(appRoot, "userdata"));
+  // Some Chromium subsystems use cache / sessionData / logs paths independently.
+  app.setPath("sessionData", path.join(appRoot, "userdata"));
+  app.setPath("logs", path.join(appRoot, "userdata", "logs"));
+}
+
 const MIME: Record<string, string> = {
   ".jpg": "image/jpeg",
   ".jpeg": "image/jpeg",

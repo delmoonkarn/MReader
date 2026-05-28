@@ -36,10 +36,9 @@ A local-first desktop application for reading folders of images as manga / comic
 ```bash
 npm install
 npm run dev      # development build with HMR
-npm run build    # produces a Windows installer under release/
 ```
 
-Or double-click `run.bat` for development, `build-release.bat` to produce an installer.
+Or double-click `run.bat`.
 
 ## Project layout
 
@@ -51,6 +50,6 @@ src/
 
 ## Data locations
 
-- Library cache: `%APPDATA%\Manga Reader\cache.db`
-- Per-route scroll positions and reader preferences: `localStorage` / `sessionStorage` in the webview
+- Library cache: `cache.db` lives in the app folder itself — next to `package.json` in development, next to the `.exe` in an installed build.
+- Per-route scroll positions and reader preferences: `localStorage` / `sessionStorage` in the webview.
 - Tags are stored both in the cache database and embedded in the cover JPEG's XMP packet, so the source of truth lives with your files.

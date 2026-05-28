@@ -5,11 +5,25 @@ import fs from "node:fs";
 
 let db: Database.Database | null = null;
 
+/**
+ * Where to put cache.db.
+ *
+ * - Dev (`npm run dev`): project root (right next to package.json).
+ * - Installed build: the same folder as the .exe (NSIS installs to a
+ *   user-writable location when perMachine=false).
+ *
+ * This keeps the database with the app instead of hiding it in %APPDATA%.
+ * Trade-off: if you delete / move the install folder, the cache goes with it.
+ */
+function cacheDbPath(): string {
+  const dir = app.isPackaged ? path.dirname(app.getPath("exe")) : app.getAppPath();
+  return path.join(dir, "cache.db");
+}
+
 export function getDb(): Database.Database {
   if (db) return db;
-  const dir = app.getPath("userData");
-  fs.mkdirSync(dir, { recursive: true });
-  const file = path.join(dir, "cache.db");
+  const file = cacheDbPath();
+  fs.mkdirSync(path.dirname(file), { recursive: true });
   db = new Database(file);
   db.pragma("journal_mode = WAL");
   db.pragma("synchronous = NORMAL");
