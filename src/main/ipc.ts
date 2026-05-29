@@ -1,7 +1,7 @@
 import { ipcMain, dialog, BrowserWindow } from "electron";
 import { getDb, getMeta, setMeta } from "./db";
 import { scanLibrary, listImages } from "./scanner";
-import { readXmpTags, writeXmpTags } from "./xmp";
+import { writeXmpTags } from "./xmp";
 import { ensureJpeg, writeJpegBuffer } from "./image";
 
 export type FolderRow = {
@@ -148,12 +148,12 @@ export function registerIpc(): void {
       const q = `%${args.query.toLowerCase()}%`;
       const params: unknown[] = [];
       let sql = `
-      SELECT DISTINCT ${SELECT_COLS}
-      FROM folders f
-    `;
+        SELECT DISTINCT ${SELECT_COLS}
+        FROM folders f
+      `;
       if (args.tags.length > 0) {
         sql += ` JOIN folder_tags ft ON ft.folder_id = f.id
-               JOIN tags t ON t.id = ft.tag_id AND t.name IN (${args.tags.map(() => "?").join(",")})`;
+                 JOIN tags t ON t.id = ft.tag_id AND t.name IN (${args.tags.map(() => "?").join(",")})`;
         params.push(...args.tags);
       }
       const where: string[] = [];
@@ -170,11 +170,11 @@ export function registerIpc(): void {
         sql += ` GROUP BY f.id HAVING COUNT(DISTINCT t.id) = ${args.tags.length}`;
       }
       sql += ` ${orderBy(args.sort)} LIMIT 500`;
-    const rows = db.prepare(sql).all(...params) as FolderRow[];
-    const tagStmt = db.prepare(
-      `SELECT t.name FROM tags t JOIN folder_tags ft ON ft.tag_id = t.id
-       WHERE ft.folder_id = ? ORDER BY t.name`
-    );
+      const rows = db.prepare(sql).all(...params) as FolderRow[];
+      const tagStmt = db.prepare(
+        `SELECT t.name FROM tags t JOIN folder_tags ft ON ft.tag_id = t.id
+         WHERE ft.folder_id = ? ORDER BY t.name`
+      );
       for (const r of rows) r.tags = (tagStmt.all(r.id) as { name: string }[]).map((t) => t.name);
       return rows;
     }
@@ -195,7 +195,7 @@ export function registerIpc(): void {
 
   ipcMain.handle(
     "library:random",
-    (_e, args: { tags: string[]; minPages?: number }) => {
+    (_e, args: { tags: string[]; query?: string; minPages?: number }) => {
       const db = getDb();
       const params: unknown[] = [];
       let sql = `
@@ -211,6 +211,10 @@ export function registerIpc(): void {
       if (typeof args.minPages === "number" && args.minPages > 0) {
         where.push("f.image_count >= ?");
         params.push(args.minPages);
+      }
+      if (args.query && args.query.trim()) {
+        where.push("LOWER(f.name) LIKE ?");
+        params.push(`%${args.query.toLowerCase().trim()}%`);
       }
       sql += ` WHERE ${where.join(" AND ")}`;
       if (args.tags.length > 0) {
@@ -243,8 +247,6 @@ export function registerIpc(): void {
     const win = BrowserWindow.fromWebContents(e.sender);
     return win?.isFullScreen() ?? false;
   });
-
-  ipcMain.handle("xmp:read", (_e, filePath: string) => readXmpTags(filePath));
 
   ipcMain.handle(
     "image:save-jpeg",

@@ -6,36 +6,39 @@ import { readXmpTags } from "./xmp";
 
 const IMAGE_EXTS = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".avif"]);
 
-export type ScanProgress = { scannedDirs: number; currentPath: string };
+type ScanProgress = { scannedDirs: number; currentPath: string };
 
-export function naturalCompare(a: string, b: string): number {
+function naturalCompare(a: string, b: string): number {
   return a.localeCompare(b, undefined, { numeric: true, sensitivity: "base" });
 }
 
-export async function listImages(dir: string): Promise<string[]> {
+/**
+ * Single-pass directory read: returns both the sorted image children and
+ * subdirectory list from one fs.readdir call.
+ */
+async function readDir(dir: string): Promise<{ images: string[]; subs: string[] }> {
   let entries;
   try {
     entries = await fs.readdir(dir, { withFileTypes: true });
   } catch {
-    return [];
+    return { images: [], subs: [] };
   }
-  const imgs = entries
-    .filter((e) => e.isFile() && IMAGE_EXTS.has(path.extname(e.name).toLowerCase()))
-    .map((e) => path.join(dir, e.name));
-  imgs.sort((a, b) => naturalCompare(path.basename(a), path.basename(b)));
-  return imgs;
+  const images: string[] = [];
+  const subs: string[] = [];
+  for (const e of entries) {
+    if (e.isDirectory()) {
+      subs.push(path.join(dir, e.name));
+    } else if (e.isFile() && IMAGE_EXTS.has(path.extname(e.name).toLowerCase())) {
+      images.push(path.join(dir, e.name));
+    }
+  }
+  images.sort((a, b) => naturalCompare(path.basename(a), path.basename(b)));
+  subs.sort(naturalCompare);
+  return { images, subs };
 }
 
-async function listSubdirs(dir: string): Promise<string[]> {
-  let entries;
-  try {
-    entries = await fs.readdir(dir, { withFileTypes: true });
-  } catch {
-    return [];
-  }
-  const subs = entries.filter((e) => e.isDirectory()).map((e) => path.join(dir, e.name));
-  subs.sort(naturalCompare);
-  return subs;
+export async function listImages(dir: string): Promise<string[]> {
+  return (await readDir(dir)).images;
 }
 
 async function dirMtime(dir: string): Promise<number> {
@@ -76,7 +79,7 @@ export async function scanLibrary(root: string, win: BrowserWindow | null): Prom
   while (queue.length > 0) {
     const { dir, parentId, depth } = queue.shift()!;
 
-    const [images, subs, mtime] = await Promise.all([listImages(dir), listSubdirs(dir), dirMtime(dir)]);
+    const [{ images, subs }, mtime] = await Promise.all([readDir(dir), dirMtime(dir)]);
     const cover = images[0] ?? null;
     const name = path.basename(dir) || dir;
 

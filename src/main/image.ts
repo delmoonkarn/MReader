@@ -29,8 +29,19 @@ export async function writeJpegBuffer(
   }
 
   const data = buffer instanceof ArrayBuffer ? new Uint8Array(buffer) : buffer;
+  // Clear read-only on destination (if same path as source) so we can overwrite.
+  try {
+    await fs.chmod(dst, 0o666);
+  } catch {
+    /* file may not exist yet, or chmod unsupported */
+  }
   await fs.writeFile(dst, data);
   if (dst !== srcPath) {
+    try {
+      await fs.chmod(srcPath, 0o666);
+    } catch {
+      /* ignore */
+    }
     try {
       await fs.unlink(srcPath);
     } catch {
@@ -74,6 +85,12 @@ export async function ensureJpeg(filePath: string): Promise<string> {
   }
   const jpeg = img.toJPEG(92);
   await fs.writeFile(dst, jpeg);
+  // Clear read-only on the source so unlink can remove it on Windows.
+  try {
+    await fs.chmod(filePath, 0o666);
+  } catch {
+    /* ignore */
+  }
   await fs.unlink(filePath);
   return dst;
 }

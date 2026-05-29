@@ -23,6 +23,12 @@ export async function writeXmpTags(filePath: string, tags: string[]): Promise<vo
   }
   const buf = await fs.readFile(filePath);
   const out = replaceXmpPacket(buf, buildXmpPacket(tags));
+  // Clear read-only attribute (Windows) so we can write back in place.
+  try {
+    await fs.chmod(filePath, 0o666);
+  } catch {
+    /* ignore — chmod may not be supported on every FS */
+  }
   await fs.writeFile(filePath, out);
 }
 

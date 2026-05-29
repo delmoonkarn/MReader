@@ -35,12 +35,15 @@ const api = {
     minPages?: number
   ): Promise<FolderRow[]> =>
     ipcRenderer.invoke("library:search", { query, tags, sort, minPages }),
-  random: (tags: string[], minPages?: number): Promise<FolderRow | null> =>
-    ipcRenderer.invoke("library:random", { tags, minPages }),
+  random: (
+    tags: string[],
+    query?: string,
+    minPages?: number
+  ): Promise<FolderRow | null> =>
+    ipcRenderer.invoke("library:random", { tags, query, minPages }),
   toggleFullscreen: (): Promise<boolean> => ipcRenderer.invoke("window:toggle-fullscreen"),
   isFullscreen: (): Promise<boolean> => ipcRenderer.invoke("window:is-fullscreen"),
   allTags: (): Promise<{ name: string; n: number }[]> => ipcRenderer.invoke("library:all-tags"),
-  readTags: (filePath: string): Promise<string[]> => ipcRenderer.invoke("xmp:read", filePath),
   writeTags: (
     filePath: string,
     tags: string[]

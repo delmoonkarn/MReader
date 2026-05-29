@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api, FolderRow } from "../api";
 import { useStore } from "../store";
@@ -49,27 +49,32 @@ export default function Gallery() {
     }
   }, [query, activeTags, sortBy, sortDir, minPages]);
 
+  // One-time mount: pull the persisted root path and install scan listeners.
   useEffect(() => {
     api.getRoot().then(setRoot);
-    refresh();
     const offP = api.onScanProgress(setProgress);
     const offD = api.onScanDone(() => {
       setScanning(false);
       setProgress(null);
-      refresh();
+      // `refresh` is captured by ref to avoid resubscribing on every filter change.
+      refreshRef.current();
     });
     return () => {
       offP();
       offD();
     };
-  }, [refresh, setRoot]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
+  // Refetch whenever the refresh closure changes (i.e. any filter / sort changes).
+  const refreshRef = useRef(refresh);
   useEffect(() => {
+    refreshRef.current = refresh;
     refresh();
-  }, [query, activeTags, sortBy, sortDir, minPages, refresh]);
+  }, [refresh]);
 
   const rollRandom = async () => {
-    const r = await api.random(activeTags, minPages);
+    const r = await api.random(activeTags, query, minPages);
     if (!r) {
       alert("No folder matches the current filters.");
       return;

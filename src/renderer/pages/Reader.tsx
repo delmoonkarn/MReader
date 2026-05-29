@@ -256,9 +256,8 @@ function DoubleMode({
 }
 
 function ScrollMode({ sources }: { sources: string[] }) {
-  const ref = useRef<HTMLDivElement>(null);
   return (
-    <div ref={ref} className="flex-1 overflow-auto">
+    <div className="flex-1 overflow-auto">
       <div className="mx-auto max-w-3xl">
         {sources.map((s, i) => (
           <img key={i} src={s} loading="lazy" className="w-full h-auto block" alt="" />
