@@ -12,6 +12,8 @@ type State = {
   readerMode: ReaderMode;
   sortBy: SortBy;
   sortDir: SortDir;
+  folderSortBy: SortBy;
+  folderSortDir: SortDir;
   setRoot: (p: string | null) => void;
   toggleTag: (t: string) => void;
   clearTags: () => void;
@@ -19,6 +21,7 @@ type State = {
   setMinPages: (n: number) => void;
   setReaderMode: (m: ReaderMode) => void;
   setSort: (by: SortBy, dir: SortDir) => void;
+  setFolderSort: (by: SortBy, dir: SortDir) => void;
 };
 
 export const useStore = create<State>((set) => ({
@@ -29,6 +32,8 @@ export const useStore = create<State>((set) => ({
   readerMode: (localStorage.getItem("readerMode") as ReaderMode | null) ?? "single",
   sortBy: (localStorage.getItem("sortBy") as SortBy | null) ?? "mtime",
   sortDir: (localStorage.getItem("sortDir") as SortDir | null) ?? "desc",
+  folderSortBy: (localStorage.getItem("folderSortBy") as SortBy | null) ?? "name",
+  folderSortDir: (localStorage.getItem("folderSortDir") as SortDir | null) ?? "asc",
   setRoot: (p) => set({ root: p }),
   toggleTag: (t) =>
     set((s) => ({
@@ -49,5 +54,10 @@ export const useStore = create<State>((set) => ({
     localStorage.setItem("sortBy", by);
     localStorage.setItem("sortDir", dir);
     set({ sortBy: by, sortDir: dir });
+  },
+  setFolderSort: (by, dir) => {
+    localStorage.setItem("folderSortBy", by);
+    localStorage.setItem("folderSortDir", dir);
+    set({ folderSortBy: by, folderSortDir: dir });
   },
 }));

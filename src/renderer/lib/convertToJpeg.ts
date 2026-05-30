@@ -8,11 +8,17 @@ import { api, toLocalUrl } from "../api";
  * Returns the new absolute path of the .jpg file. The original file is
  * deleted by main once the JPEG is safely written.
  *
- * If `srcPath` is already a JPEG, returns it unchanged.
+ * If `srcPath` is already a JPEG by extension and `force` is false,
+ * returns it unchanged. Pass `force = true` when the file is named .jpg
+ * but its content isn't actually JPEG (e.g. a renamed PNG/WebP) — the
+ * canvas will decode it from whatever its true format is and write back
+ * a real JPEG to the same path.
  */
-export async function convertCoverToJpeg(srcPath: string): Promise<string> {
-  const lower = srcPath.toLowerCase();
-  if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return srcPath;
+export async function convertCoverToJpeg(srcPath: string, force = false): Promise<string> {
+  if (!force) {
+    const lower = srcPath.toLowerCase();
+    if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return srcPath;
+  }
 
   // Load via local:// so Chromium decodes whatever it understands.
   const url = toLocalUrl(srcPath);

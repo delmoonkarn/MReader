@@ -9,9 +9,12 @@ const OPTIONS: { value: string; label: string; by: SortBy; dir: SortDir }[] = [
   { value: "image_count:asc", label: "Fewest pages", by: "image_count", dir: "asc" },
 ];
 
-export default function SortPicker() {
-  const { sortBy, sortDir, setSort } = useStore();
-  const value = `${sortBy}:${sortDir}`;
+export default function SortPicker({ scope = "main" }: { scope?: "main" | "folder" }) {
+  const store = useStore();
+  const by = scope === "folder" ? store.folderSortBy : store.sortBy;
+  const dir = scope === "folder" ? store.folderSortDir : store.sortDir;
+  const setSort = scope === "folder" ? store.setFolderSort : store.setSort;
+  const value = `${by}:${dir}`;
 
   return (
     <select
@@ -21,7 +24,7 @@ export default function SortPicker() {
         if (opt) setSort(opt.by, opt.dir);
       }}
       className="px-2 py-1 bg-neutral-900 border border-neutral-800 rounded text-xs text-neutral-200 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-      title="Sort folders"
+      title={scope === "folder" ? "Sort subfolders" : "Sort top-level folders"}
     >
       {OPTIONS.map((o) => (
         <option key={o.value} value={o.value}>

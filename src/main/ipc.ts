@@ -1,4 +1,4 @@
-import { ipcMain, dialog, BrowserWindow } from "electron";
+import { ipcMain, dialog, BrowserWindow, shell } from "electron";
 import { getDb, getMeta, setMeta } from "./db";
 import { scanLibrary, listImages } from "./scanner";
 import { writeXmpTags } from "./xmp";
@@ -234,6 +234,11 @@ export function registerIpc(): void {
       return row;
     }
   );
+
+  ipcMain.handle("shell:open-path", async (_e, p: string) => {
+    const err = await shell.openPath(p);
+    if (err) throw new Error(err);
+  });
 
   ipcMain.handle("window:toggle-fullscreen", (e) => {
     const win = BrowserWindow.fromWebContents(e.sender);

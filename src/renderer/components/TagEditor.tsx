@@ -61,9 +61,22 @@ export default function TagEditor({ initial, coverPath, onSaved, onCancel }: Pro
     try {
       // Pre-convert via the renderer's Canvas so WebP and other Chromium-decodable
       // formats work — main's nativeImage falls flat on WebP.
-      const jpegPath = await convertCoverToJpeg(coverPath);
-      const result = await api.writeTags(jpegPath, tags);
-      onSaved(result.finalPath);
+      let jpegPath = await convertCoverToJpeg(coverPath);
+      try {
+        const result = await api.writeTags(jpegPath, tags);
+        onSaved(result.finalPath);
+      } catch (err: unknown) {
+        const msg = (err as Error).message ?? String(err);
+        // File has .jpg/.jpeg extension but its content isn't actually JPEG
+        // (renamed PNG/WebP). Force a canvas re-encode and retry once.
+        if (/not a JPEG|invalid JPEG/i.test(msg)) {
+          jpegPath = await convertCoverToJpeg(coverPath, true);
+          const result = await api.writeTags(jpegPath, tags);
+          onSaved(result.finalPath);
+        } else {
+          throw err;
+        }
+      }
     } catch (err: unknown) {
       alert(`Failed to save tags: ${(err as Error).message ?? err}`);
     } finally {

@@ -19,7 +19,7 @@ export default function FolderView() {
   const [subExpanded, setSubExpanded] = useState(false);
   const [trail, setTrail] = useState<Crumb[]>([]);
   const [editTags, setEditTags] = useState(false);
-  const { clearTags, toggleTag, sortBy, sortDir } = useStore();
+  const { clearTags, toggleTag, folderSortBy, folderSortDir } = useStore();
 
   const refreshSelf = async () => {
     const [fresh, freshPages] = await Promise.all([api.get(folderId), api.pages(folderId)]);
@@ -35,10 +35,10 @@ export default function FolderView() {
 
   useEffect(() => {
     api.get(folderId).then(setSelf);
-    api.children(folderId, { by: sortBy, dir: sortDir }).then(setRows);
+    api.children(folderId, { by: folderSortBy, dir: folderSortDir }).then(setRows);
     api.pages(folderId).then(setPages);
     api.ancestors(folderId).then(setTrail);
-  }, [folderId, sortBy, sortDir]);
+  }, [folderId, folderSortBy, folderSortDir]);
 
   const routeKey = `/folder/${folderId}`;
   const lastChild = getLastVisited(routeKey);
@@ -70,7 +70,18 @@ export default function FolderView() {
         <div className="flex-1 min-w-0" title={self?.path}>
           <Breadcrumb trail={trail} />
         </div>
-        {hasChildren && <SortPicker />}
+        {hasChildren && <SortPicker scope="folder" />}
+        {self?.path && (
+          <button
+            onClick={() =>
+              api.openFolder(self.path).catch((e: Error) => alert(`Could not open: ${e.message}`))
+            }
+            className="px-2 py-1 bg-neutral-800 hover:bg-neutral-700 rounded text-xs whitespace-nowrap"
+            title="Open this folder in File Explorer"
+          >
+            📁 Open
+          </button>
+        )}
         {hasImages && (
           <button
             onClick={() => nav(`/read/${folderId}`)}
