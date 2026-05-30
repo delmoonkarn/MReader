@@ -9,9 +9,11 @@ export default function TagFilter({ refreshKey = 0 }: { refreshKey?: number }) {
   const [tagQuery, setTagQuery] = useState("");
   const { activeTags, toggleTag, clearTags } = useStore();
 
+  // Narrow the available tag list to tags that co-occur with the active selection.
+  // (When nothing is active, this returns every tag in the library.)
   useEffect(() => {
-    api.allTags().then(setTags);
-  }, [refreshKey]);
+    api.allTags(activeTags).then(setTags);
+  }, [refreshKey, activeTags]);
 
   const visible = useMemo(() => {
     const q = tagQuery.toLowerCase().trim();

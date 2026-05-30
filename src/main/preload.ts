@@ -45,7 +45,8 @@ const api = {
   isFullscreen: (): Promise<boolean> => ipcRenderer.invoke("window:is-fullscreen"),
   openFolder: (folderPath: string): Promise<void> =>
     ipcRenderer.invoke("shell:open-path", folderPath),
-  allTags: (): Promise<{ name: string; n: number }[]> => ipcRenderer.invoke("library:all-tags"),
+  allTags: (withTags?: string[]): Promise<{ name: string; n: number }[]> =>
+    ipcRenderer.invoke("library:all-tags", withTags),
   writeTags: (
     filePath: string,
     tags: string[]

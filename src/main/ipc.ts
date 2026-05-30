@@ -90,7 +90,7 @@ export function registerIpc(): void {
       `;
       const rows = db.prepare(sql).all(...params) as FolderRow[];
       const tagStmt = db.prepare(
-        `SELECT t.name FROM tags t JOIN folder_tags ft ON ft.tag_id = t.id
+        `SELECT DISTINCT t.name FROM tags t JOIN folder_tags ft ON ft.tag_id = t.id
          WHERE ft.folder_id = ? ORDER BY t.name`
       );
       for (const row of rows) {
@@ -126,7 +126,7 @@ export function registerIpc(): void {
     row.tags = (
       db
         .prepare(
-          `SELECT t.name FROM tags t JOIN folder_tags ft ON ft.tag_id = t.id
+          `SELECT DISTINCT t.name FROM tags t JOIN folder_tags ft ON ft.tag_id = t.id
            WHERE ft.folder_id = ? ORDER BY t.name`
         )
         .all(id) as { name: string }[]
@@ -172,7 +172,7 @@ export function registerIpc(): void {
       sql += ` ${orderBy(args.sort)} LIMIT 500`;
       const rows = db.prepare(sql).all(...params) as FolderRow[];
       const tagStmt = db.prepare(
-        `SELECT t.name FROM tags t JOIN folder_tags ft ON ft.tag_id = t.id
+        `SELECT DISTINCT t.name FROM tags t JOIN folder_tags ft ON ft.tag_id = t.id
          WHERE ft.folder_id = ? ORDER BY t.name`
       );
       for (const r of rows) r.tags = (tagStmt.all(r.id) as { name: string }[]).map((t) => t.name);
@@ -180,17 +180,36 @@ export function registerIpc(): void {
     }
   );
 
-  ipcMain.handle("library:all-tags", () => {
+  ipcMain.handle("library:all-tags", (_e, withTags?: string[]) => {
     const db = getDb();
-    return (
-      db
+    // No filter — return every tag with its global usage count.
+    if (!withTags || withTags.length === 0) {
+      return db
         .prepare(
-          `SELECT t.name, COUNT(*) as n
+          `SELECT t.name, COUNT(DISTINCT ft.folder_id) as n
            FROM tags t JOIN folder_tags ft ON ft.tag_id = t.id
            GROUP BY t.id ORDER BY n DESC, t.name`
         )
-        .all() as { name: string; n: number }[]
-    );
+        .all() as { name: string; n: number }[];
+    }
+    // Narrow to tags that co-occur with all of `withTags` on the same folder.
+    const placeholders = withTags.map(() => "?").join(",");
+    const sql = `
+      SELECT t.name, COUNT(DISTINCT ft.folder_id) as n
+      FROM tags t JOIN folder_tags ft ON ft.tag_id = t.id
+      WHERE ft.folder_id IN (
+        SELECT ft2.folder_id
+        FROM folder_tags ft2
+        JOIN tags t2 ON t2.id = ft2.tag_id AND t2.name IN (${placeholders})
+        GROUP BY ft2.folder_id
+        HAVING COUNT(DISTINCT t2.id) = ?
+      )
+      GROUP BY t.id
+      ORDER BY n DESC, t.name
+    `;
+    return db
+      .prepare(sql)
+      .all(...withTags, withTags.length) as { name: string; n: number }[];
   });
 
   ipcMain.handle(
@@ -226,7 +245,7 @@ export function registerIpc(): void {
       row.tags = (
         db
           .prepare(
-            `SELECT t.name FROM tags t JOIN folder_tags ft ON ft.tag_id = t.id
+            `SELECT DISTINCT t.name FROM tags t JOIN folder_tags ft ON ft.tag_id = t.id
              WHERE ft.folder_id = ? ORDER BY t.name`
           )
           .all(row.id) as { name: string }[]
@@ -284,9 +303,12 @@ export function registerIpc(): void {
       | { id: number }
       | undefined;
     if (row) {
+      // Use the same 'xmp' source the scanner uses — the tags ARE in the file's
+      // XMP packet now, so there's no real distinction. Avoids two rows per tag
+      // (one 'user', one 'xmp') after the next rescan.
       db.prepare("DELETE FROM folder_tags WHERE folder_id = ? AND source IN ('xmp','user')").run(row.id);
       const ins = db.prepare(
-        "INSERT OR IGNORE INTO folder_tags(folder_id, tag_id, source) VALUES (?, ?, 'user')"
+        "INSERT OR IGNORE INTO folder_tags(folder_id, tag_id, source) VALUES (?, ?, 'xmp')"
       );
       const tx = db.transaction(() => {
         for (const t of args.tags) {
